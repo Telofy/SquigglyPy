@@ -40,6 +40,8 @@ class Operation(Resolveable):
             this = ~this
         if isinstance(self.other, Resolveable):
             other = ~other
+        if other is self.NOT_SET:
+            return self.function(this)
         return self.function(this, other)
 
 
@@ -63,13 +65,10 @@ class Value(Resolveable):
         return self.value
 
     def _operation(self, function, other=Operation.NOT_SET, reverse: bool = False):
-        if other is Operation.NOT_SET:
-            return Value(Operation(function, self))
         if reverse:
             return Value(Operation(function, other, self))
         return Value(Operation(function, self, other))
 
-    __not__ = partialmethod(_operation, operator.not_)
     __neg__ = partialmethod(_operation, operator.neg)
     __pos__ = partialmethod(_operation, operator.pos)
     __abs__ = partialmethod(_operation, operator.abs)
@@ -90,14 +89,7 @@ class Value(Resolveable):
     __rsub__ = partialmethod(_operation, operator.sub, reverse=True)
     __rtruediv__ = partialmethod(_operation, operator.truediv, reverse=True)
 
-    __and__ = partialmethod(_operation, operator.and_)
-    __or__ = partialmethod(_operation, operator.or_)
-    __xor__ = partialmethod(_operation, operator.xor)
-
-    __rand__ = partialmethod(_operation, operator.and_, reverse=True)
-    __ror__ = partialmethod(_operation, operator.or_, reverse=True)
-    __rxor__ = partialmethod(_operation, operator.xor, reverse=True)
-
+    # TODO: Decide whether the implementation of the below six methods is really what we want
     __lt__ = partialmethod(_operation, operator.lt)
     __le__ = partialmethod(_operation, operator.le)
     __eq__ = partialmethod(_operation, operator.eq)  # type: ignore
