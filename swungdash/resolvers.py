@@ -21,7 +21,5 @@ class Integral(Resolveable):
         with Context() as context:
             for _ in range(context.sample_count):
                 with Context(cache={}, sample_count=1) as context:
-                    integral, error = integrate.quad(
-                        self._integrand_wrapper, self.low, self.high
-                    )
+                    integral, _error = integrate.quad(self._integrand_wrapper, self.low, self.high)
                     yield integral
