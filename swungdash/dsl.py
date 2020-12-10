@@ -4,20 +4,20 @@ from .tree import Distribution, Mixture
 from .resolvers import Integral
 
 
-def uniform(*args, **kwargs):
-    return Distribution(np.random.uniform, *args, **kwargs)
+def uniform(*args):
+    return Distribution(np.random.uniform, *args)
 
 
-def normal(*args, **kwargs):
-    return Distribution(np.random.normal, *args, **kwargs)
+def normal(*args):
+    return Distribution(np.random.normal, *args)
 
 
-def lognormal(*args, **kwargs):
-    return Distribution(np.random.lognormal, *args, **kwargs)
+def lognormal(*args):
+    return Distribution(np.random.lognormal, *args)
 
 
-def pareto(*args, **kwargs):
-    return Distribution(np.random.pareto, *args, **kwargs)
+def pareto(*args):
+    return Distribution(np.random.pareto, *args)
 
 
 def mixture(*values):
