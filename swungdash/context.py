@@ -4,6 +4,9 @@ from collections.abc import Iterable, Callable
 from dataclasses import dataclass, field
 
 
+DEFAULT_SAMPLE_COUNT = 1000
+
+
 @dataclass(frozen=True)
 class CacheKey:
     function: Callable = None
@@ -19,7 +22,7 @@ class SwungdashContext:
 
     cache: dict = field(default_factory=dict)
     cache_rule: str = "constant"
-    sample_count: int = 100
+    sample_count: int = DEFAULT_SAMPLE_COUNT
 
 
 class Context:
