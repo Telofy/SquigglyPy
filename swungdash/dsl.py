@@ -1,6 +1,6 @@
 import numpy as np
 
-from .tree import Distribution, Multimodal
+from .tree import Distribution, Mixture
 from .resolvers import Integral
 
 
@@ -20,8 +20,8 @@ def pareto(*args, **kwargs):
     return Distribution(np.random.pareto, *args, **kwargs)
 
 
-def multimodal(*values):
-    return Multimodal(*values)
+def mixture(*values):
+    return Mixture(*values)
 
 
 def integral(*args, **kwargs):

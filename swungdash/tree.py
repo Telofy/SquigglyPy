@@ -139,7 +139,7 @@ class Distribution(Value):
             return value
 
 
-class Multimodal(Value):
+class Mixture(Value):
     def __init__(self, *values):  # pylint: disable=super-init-not-called
         self.values = values
 
