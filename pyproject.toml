@@ -6,15 +6,15 @@ authors = ["Denis Drescher <denis.drescher@claviger.net>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 numpy = "^1.19"
 boltons = "^20.2"
 matplotlib = "^3.3"
 seaborn = "^0.11.0"
 scipy = "^1.5"
-mypy = "^0.790"
 
 [tool.poetry.dev-dependencies]
+mypy = "^0.790"
 pytest = "^6.1"
 black = "^20.8b1"
 pylint = "^2.6.0"
