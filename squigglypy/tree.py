@@ -1,5 +1,5 @@
 import operator
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partialmethod
 from random import sample

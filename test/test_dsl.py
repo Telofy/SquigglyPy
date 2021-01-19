@@ -1,9 +1,9 @@
 import operator
 
 from pytest import approx, mark
-from swungdash.context import DEFAULT_SAMPLE_COUNT
-from swungdash.dsl import lognormal, mixture, normal, pareto, uniform
-from swungdash.tree import Value
+from squigglypy.context import DEFAULT_SAMPLE_COUNT
+from squigglypy.dsl import lognormal, mixture, normal, pareto, uniform
+from squigglypy.tree import Value
 
 
 def test_uniform():

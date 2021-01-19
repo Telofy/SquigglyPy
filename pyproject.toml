@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "swungdash"
+name = "squigglypy"
 version = "0.1.0"
 description = ""
 authors = ["Denis Drescher <denis.drescher@claviger.net>"]
