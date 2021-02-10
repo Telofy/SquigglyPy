@@ -1,6 +1,0 @@
-{
-    "python.linting.mypyPath": "/home/telofy/.cache/pypoetry/virtualenvs/swungdash-wwOyC_bq-py3.9/bin/mypy",
-    "python.pythonPath": "/home/telofy/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.9/bin/python",
-    "python.linting.mypyEnabled": true,
-    "files.autoSave": "onFocusChange",
-}

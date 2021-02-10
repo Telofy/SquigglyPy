@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.autoSave": "onFocusChange",
+    "python.pythonPath": "~/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.9/bin/python",
+    "python.linting.mypyPath": "~/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.9/bin/mypy",
+    "python.linting.mypyEnabled": false,
+    "python.linting.enabled": false,
+    "pythonTestExplorer.testFramework": "pytest",
+  }
+}
