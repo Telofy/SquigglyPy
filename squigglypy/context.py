@@ -2,6 +2,7 @@ import contextvars
 
 from collections.abc import Iterable, Callable
 from dataclasses import dataclass, field
+from typing import Any, Dict, Hashable, Optional, Tuple
 
 
 DEFAULT_SAMPLE_COUNT = 1000
@@ -9,18 +10,18 @@ DEFAULT_SAMPLE_COUNT = 1000
 
 @dataclass(frozen=True)
 class CacheKey:
-    function: Callable = None
-    args: tuple = None
-    kwargs: tuple = None
-    sample_count: int = None
-    nested: tuple = None
+    function: Optional[Callable[..., Any]] = None
+    args: Optional[Tuple[Any, ...]] = None
+    kwargs: Optional[Tuple[str, Any]] = None
+    sample_count: Optional[int] = None
+    nested: Optional[Tuple[Hashable, ...]] = None
 
 
 @dataclass
 class SwungdashContext:
     CACHE_RULES = {"never", "constant", "always"}
 
-    cache: dict = field(default_factory=dict)
+    cache: Dict[Hashable, Iterable[float]] = field(default_factory=dict)
     cache_rule: str = "constant"
     sample_count: int = DEFAULT_SAMPLE_COUNT
 

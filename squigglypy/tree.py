@@ -1,33 +1,55 @@
 import operator
+from itertools import chain
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partialmethod
 from random import sample
+from typing import Any, Hashable, Iterable, List, Optional, Union
+from enum import Enum
 
 import numpy as np
 
 from .context import CacheKey, Context
 
 
+class Empty(Enum):
+    # See https://www.python.org/dev/peps/pep-0484/#support-for-singleton-types-in-unions
+    empty = None
+
+
+_empty = Empty.empty
+
+
 class Resolveable:
-    def __invert__(self):
+    def __invert__(self) -> Union[float, Iterable[float]]:
         return self._resolve()
+
+    def _resolve(self) -> Union[float, Iterable[float]]:
+        raise NotImplementedError
+
+    @property
+    def cache_key(self) -> Hashable:
+        raise NotImplementedError
 
 
 class Operation(Resolveable):
-    NOT_SET = object()
-
-    def __init__(self, function: Callable, this, other=NOT_SET):
+    def __init__(
+        self,
+        function: Callable[..., Any],
+        this: Union[float, "Value"],
+        other: Union[float, "Value", Empty] = _empty,
+    ):
         self.function = function
         self.this = this
         self.other = other
 
     @property
     def cache_key(self):
-        this_key, other_key = self.this, self.other
-        if isinstance(self.this, Resolveable):
+        this_key: Union[Hashable, "Value"] = self.this
+        other_key: Union[Hashable, "Value"] = self.other
+        if isinstance(self.this, Value):
             this_key = self.this.cache_key
-        if isinstance(self.other, Resolveable):
+        if isinstance(self.other, Value):
             other_key = self.other.cache_key
         return CacheKey(function=self.function, nested=(this_key, other_key))
 
@@ -36,19 +58,21 @@ class Operation(Resolveable):
 
     def _resolve(self):
         this, other = self.this, self.other
-        if isinstance(self.this, Resolveable):
+        if isinstance(this, Resolveable):
             this = ~this
-        if isinstance(self.other, Resolveable):
+        if isinstance(other, Resolveable):
             other = ~other
-        if other is self.NOT_SET:
+        if other is _empty:
             return self.function(this)
         return self.function(this, other)
 
 
 class Value(Resolveable):
-    def __init__(self, value, constant=True, **kwargs):
+    constant: Optional[bool] = None  # Whether the value depends on independent variables
+
+    def __init__(self, value: Union[float, Resolveable], constant: Optional[bool] = None):
         self.value = value
-        self.constant = constant and getattr(value, "constant", True)
+        self.constant = constant
 
     def __repr__(self):
         return f"{type(self).__name__}({self.value})"
@@ -64,8 +88,14 @@ class Value(Resolveable):
             return ~self.value
         return self.value
 
-    def _operation(self, function, other=Operation.NOT_SET, reverse: bool = False):
+    def _operation(
+        self,
+        function: Callable[..., Union[float, bool]],
+        other: Empty = _empty,
+        reverse: bool = False,
+    ):
         if reverse:
+            assert other is not _empty
             return Value(Operation(function, other, self))
         return Value(Operation(function, self, other))
 
@@ -99,15 +129,21 @@ class Value(Resolveable):
 
 
 class Distribution(Value):
-    def __init__(self, function, *args, **kwargs):  # pylint: disable=super-init-not-called
+    constant = True
+
+    def __init__(
+        self,
+        function: Callable[..., Iterable[float]],
+        *args: float,
+        **kwargs: Empty,
+    ):  # pylint: disable=super-init-not-called
         self.function = function
         self.args = args
         self.kwargs = kwargs
-        self.constant = True
 
     def __repr__(self):
         name = type(self).__name__
-        function = str(self.function)
+        function = self.function.__name__
         args = ", ".join(map(str, self.args))
         kwargs = ", ".join(f"{key}={value}" for key, value in self.kwargs.items())
         return f'{name}({", ".join(part for part in (function, args, kwargs) if part)})'
@@ -132,8 +168,8 @@ class Distribution(Value):
 
 
 class Mixture(Value):
-    def __init__(self, *values):  # pylint: disable=super-init-not-called
-        self.values = values
+    def __init__(self, *values: Value):  # pylint: disable=super-init-not-called
+        self.values: Iterable[Value] = values
 
     @property
     def cache_key(self):
@@ -143,7 +179,8 @@ class Mixture(Value):
                 nested=tuple(replace(value.cache_key, sample_count=None) for value in self.values),
             )
 
-    def _sample(self, *values):
+    @staticmethod
+    def _sample(*values: Value):
         with Context() as context:
             remainder = context.sample_count % len(values)
             sample_counts = [context.sample_count // len(values)] * len(values)
@@ -164,3 +201,62 @@ class Mixture(Value):
             value = self._sample(*self.values)
             context.cache[self.cache_key] = value
             return value
+
+
+_tracer: Value = Value(0)
+
+
+def _mark_constancy(tree: Union[float, Value]) -> bool:
+    if tree is _tracer:
+        return False
+    if not isinstance(tree, Value):
+        return True
+    if tree.constant is not None:
+        return tree.constant
+    if isinstance(tree, Mixture):
+        tree.values = [
+            value if hasattr(value, "constant") else Value(value, constant=True)
+            for value in tree.values
+        ]
+        for value in tree.values:
+            value.constant = _mark_constancy(value)
+        return all(value.constant for value in tree.values)
+    assert isinstance(tree, Value), f"Subtree is a {type(tree)}"
+    if isinstance(tree.value, Operation):
+        if not isinstance(tree.value.this, Value):
+            tree.value.this = Value(tree.value.this, constant=True)
+        tree.value.this.constant = _mark_constancy(tree.value.this)
+        if tree.value.other is _empty:
+            return tree.value.this.constant
+        if not isinstance(tree.value.other, Value):
+            tree.value.other = Value(tree.value.other, constant=True)
+        tree.value.other.constant = _mark_constancy(tree.value.other)
+        return tree.value.this.constant and tree.value.other.constant
+    if not isinstance(tree.value, Value):
+        tree.value = Value(tree.value, constant=True)
+    tree.value.constant = _mark_constancy(tree.value)
+    return tree.value.constant
+
+
+def mark_constancy(tree: Union[float, Value]):
+    if isinstance(tree, Value):
+        tree.constant = _mark_constancy(tree)
+    return tree
+
+
+def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
+    if isinstance(tree, Distribution):
+        return [tree]
+    if isinstance(tree, Mixture):
+        return list(chain.from_iterable(_bfs(value_) for value_ in tree.values))
+    if isinstance(tree, Value):
+        return _bfs(tree.value)
+    if isinstance(tree, Operation):
+        return _bfs(tree.this) + _bfs(tree.other)
+    return []
+
+
+def bfs(model: Callable[[Union[float, Value]], Union[float, Value]]) -> List[Value]:
+    tree = model(_tracer)
+    tree = mark_constancy(tree)  # For visualization
+    return _bfs(tree)
