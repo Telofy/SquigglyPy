@@ -1,1 +1,8 @@
-__pycache__
+__pycache__/
+/.mypy_cache/
+/.pytest_cache/
+/build/
+/dist/
+/install/
+/squigglypy.egg-info/
+/setup.py
