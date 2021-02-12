@@ -244,6 +244,33 @@ def mark_constancy(tree: Union[float, Value]):
     return tree
 
 
+def _wrap_literals_in_operation(operation: Operation) -> Operation:
+    if operation.this is not _empty:
+        operation.this = wrap_literals(operation.this)
+    if operation.other is not _empty:
+        operation.other = wrap_literals(operation.other)
+    return operation
+
+
+def wrap_literals(tree: Union[float, Resolveable, Empty]) -> Value:
+    if isinstance(tree, Mixture):
+        for i, value in enumerate(tree.values):
+            tree.values[i] = wrap_literals(value)
+        return tree
+    if isinstance(tree, Value):
+        if isinstance(tree.value, Operation):
+            tree.value = _wrap_literals_in_operation(tree.value)
+        else:
+            tree.value = wrap_literals(tree.value)
+        return tree
+    return Value(tree)
+
+
+def simplify(tree: Union[float, Value]) -> Value:
+    tree = mark_constancy(tree)
+    tree = wrap_literals(tree)
+    return tree
+
 def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
     if isinstance(tree, Distribution):
         return [tree]
