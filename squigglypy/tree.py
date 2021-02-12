@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import operator
 from itertools import chain
 from collections.abc import Callable
@@ -21,10 +23,10 @@ _empty = Empty.empty
 
 
 class Resolveable:
-    def __invert__(self) -> Union[float, Iterable[float]]:
+    def __invert__(self):
         return self._resolve()
 
-    def _resolve(self) -> Union[float, Iterable[float]]:
+    def _resolve(self) -> Union[float, Iterable[float], Empty]:
         raise NotImplementedError
 
     @property
@@ -32,45 +34,10 @@ class Resolveable:
         raise NotImplementedError
 
 
-class Operation(Resolveable):
-    def __init__(
-        self,
-        function: Callable[..., Any],
-        this: Union[float, "Value"],
-        other: Union[float, "Value", Empty] = _empty,
-    ):
-        self.function = function
-        self.this = this
-        self.other = other
-
-    @property
-    def cache_key(self):
-        this_key: Union[Hashable, "Value"] = self.this
-        other_key: Union[Hashable, "Value"] = self.other
-        if isinstance(self.this, Value):
-            this_key = self.this.cache_key
-        if isinstance(self.other, Value):
-            other_key = self.other.cache_key
-        return CacheKey(function=self.function, nested=(this_key, other_key))
-
-    def __repr__(self):
-        return f"{type(self).__name__}({self.function}, {self.this}, {self.other})"
-
-    def _resolve(self):
-        this, other = self.this, self.other
-        if isinstance(this, Resolveable):
-            this = ~this
-        if isinstance(other, Resolveable):
-            other = ~other
-        if other is _empty:
-            return self.function(this)
-        return self.function(this, other)
-
-
 class Value(Resolveable):
     constant: Optional[bool] = None  # Whether the value depends on independent variables
 
-    def __init__(self, value: Union[float, Resolveable], constant: Optional[bool] = None):
+    def __init__(self, value: Union[float, Resolveable, Empty], constant: Optional[bool] = None):
         self.value = value
         self.constant = constant
 
@@ -91,11 +58,13 @@ class Value(Resolveable):
     def _operation(
         self,
         function: Callable[..., Union[float, bool]],
-        other: Empty = _empty,
+        other: Union[float, Value, Empty] = _empty,
         reverse: bool = False,
     ):
+        if not isinstance(other, Resolveable):
+            other = Value(other)
         if reverse:
-            assert other is not _empty
+            assert other.value is not _empty
             return Value(Operation(function, other, self))
         return Value(Operation(function, self, other))
 
@@ -126,6 +95,33 @@ class Value(Resolveable):
     __ne__ = partialmethod(_operation, operator.ne)  # type: ignore
     __ge__ = partialmethod(_operation, operator.ge)
     __gt__ = partialmethod(_operation, operator.gt)
+
+
+class Operation(Resolveable):
+    def __init__(
+        self,
+        function: Callable[..., Any],
+        this: Value,
+        other: Value = Value(_empty),
+    ):
+        self.function = function
+        self.this = this
+        self.other = other
+
+    @property
+    def cache_key(self):
+        this_key = self.this.cache_key
+        other_key = self.other.cache_key
+        return CacheKey(function=self.function, nested=(this_key, other_key))
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.function}, {self.this}, {self.other})"
+
+    def _resolve(self):
+        this, other = ~self.this, ~self.other
+        if other is _empty:
+            return self.function(this)
+        return self.function(this, other)
 
 
 class Distribution(Value):
@@ -169,7 +165,7 @@ class Distribution(Value):
 
 class Mixture(Value):
     def __init__(self, *values: Value):  # pylint: disable=super-init-not-called
-        self.values: Iterable[Value] = values
+        self.values: List[Value] = list(values)
 
     @property
     def cache_key(self):
@@ -214,22 +210,13 @@ def _mark_constancy(tree: Union[float, Value]) -> bool:
     if tree.constant is not None:
         return tree.constant
     if isinstance(tree, Mixture):
-        tree.values = [
-            value if hasattr(value, "constant") else Value(value, constant=True)
-            for value in tree.values
-        ]
         for value in tree.values:
             value.constant = _mark_constancy(value)
         return all(value.constant for value in tree.values)
-    assert isinstance(tree, Value), f"Subtree is a {type(tree)}"
     if isinstance(tree.value, Operation):
-        if not isinstance(tree.value.this, Value):
-            tree.value.this = Value(tree.value.this, constant=True)
         tree.value.this.constant = _mark_constancy(tree.value.this)
         if tree.value.other is _empty:
             return tree.value.this.constant
-        if not isinstance(tree.value.other, Value):
-            tree.value.other = Value(tree.value.other, constant=True)
         tree.value.other.constant = _mark_constancy(tree.value.other)
         return tree.value.this.constant and tree.value.other.constant
     if not isinstance(tree.value, Value):
@@ -239,37 +226,11 @@ def _mark_constancy(tree: Union[float, Value]) -> bool:
 
 
 def mark_constancy(tree: Union[float, Value]):
-    if isinstance(tree, Value):
-        tree.constant = _mark_constancy(tree)
+    if not isinstance(tree, Value):
+        return tree
+    tree.constant = _mark_constancy(tree)
     return tree
 
-
-def _wrap_literals_in_operation(operation: Operation) -> Operation:
-    if operation.this is not _empty:
-        operation.this = wrap_literals(operation.this)
-    if operation.other is not _empty:
-        operation.other = wrap_literals(operation.other)
-    return operation
-
-
-def wrap_literals(tree: Union[float, Resolveable, Empty]) -> Value:
-    if isinstance(tree, Mixture):
-        for i, value in enumerate(tree.values):
-            tree.values[i] = wrap_literals(value)
-        return tree
-    if isinstance(tree, Value):
-        if isinstance(tree.value, Operation):
-            tree.value = _wrap_literals_in_operation(tree.value)
-        else:
-            tree.value = wrap_literals(tree.value)
-        return tree
-    return Value(tree)
-
-
-def simplify(tree: Union[float, Value]) -> Value:
-    tree = mark_constancy(tree)
-    tree = wrap_literals(tree)
-    return tree
 
 def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
     if isinstance(tree, Distribution):
