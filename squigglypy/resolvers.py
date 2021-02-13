@@ -1,25 +1,37 @@
-from collections.abc import Iterable, Callable
+from collections.abc import Callable
+from typing import Tuple, Union
 
-from scipy import integrate
+from scipy.integrate import quad
 
 from .context import Context
-from .tree import Resolveable
+from .tree import Resolveable, Value
 from .utils import aslist
 
 
+quad: Callable[..., Tuple[float, float]]
+
+
 class Integral(Resolveable):
-    def __init__(self, integrand, low, high):
+    def __init__(
+        self,
+        integrand: Callable[[Union[float, Value]], Union[float, Value]],
+        low: float,
+        high: float,
+    ):
         self.integrand = integrand
         self.low = low
         self.high = high
 
-    def _integrand_wrapper(self, x):
-        return ~self.integrand(x)
+    def _integrand_wrapper(self, x: float):
+        result = self.integrand(x)
+        if isinstance(result, Value):
+            return ~result
+        return result
 
     @aslist
     def _resolve(self):
         with Context() as context:
             for _ in range(context.sample_count):
                 with Context(cache={}, sample_count=1) as context:
-                    integral, _error = integrate.quad(self._integrand_wrapper, self.low, self.high)
+                    integral, _ = quad(self._integrand_wrapper, self.low, self.high)
                     yield integral

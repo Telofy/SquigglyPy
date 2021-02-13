@@ -1,5 +1,8 @@
 import operator
+from typing import Any, Callable, Iterable, Tuple, Union
+from _pytest.python_api import ApproxScalar
 
+import numpy as np
 from pytest import approx, mark
 from squigglypy.context import DEFAULT_SAMPLE_COUNT
 from squigglypy.dsl import lognormal, mixture, normal, pareto, uniform
@@ -8,6 +11,7 @@ from squigglypy.tree import Value
 
 def test_uniform():
     samples = ~uniform(0, 1)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(0.5, abs=0.2)
     assert samples.max() <= 1
@@ -16,6 +20,7 @@ def test_uniform():
 
 def test_normal():
     samples = ~normal(0, 1)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(0, abs=0.2)
     assert samples.max() <= 10
@@ -24,6 +29,7 @@ def test_normal():
 
 def test_lognormal():
     samples = ~lognormal(0, 1)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(1.7, abs=0.3)
     assert samples.max() - samples.mean() > samples.mean() - samples.min()
@@ -31,6 +37,7 @@ def test_lognormal():
 
 def test_pareto():
     samples = ~pareto(1)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() > 4
     assert samples.max() - samples.mean() > samples.mean() - samples.min()
@@ -38,6 +45,7 @@ def test_pareto():
 
 def test_mixture():
     samples = ~mixture(normal(0, 1), normal(10, 1))
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(5, abs=0.2)
     assert not samples[(samples > 4.5) & (samples < 5.5)]
@@ -54,8 +62,11 @@ def test_mixture():
         (normal(3, 1), Value(4)),
     ],
 )
-def test_distribution_addition(this, other):
-    samples = ~(this + other)
+def test_distribution_addition(this: Union[float, Value], other: Union[float, Value]):
+    combination = this + other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(7, abs=0.2)
 
@@ -70,8 +81,11 @@ def test_distribution_addition(this, other):
         (normal(3, 1), Value(4)),
     ],
 )
-def test_distribution_substration(this, other):
-    samples = ~(this - other)
+def test_distribution_substration(this: Union[float, Value], other: Union[float, Value]):
+    combination = this - other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(-1, abs=0.2)
 
@@ -87,8 +101,11 @@ def test_distribution_substration(this, other):
         (normal(3, 1), Value(4)),
     ],
 )
-def test_distribution_multiplication(this, other):
-    samples = ~(this * other)
+def test_distribution_multiplication(this: Union[float, Value], other: Union[float, Value]):
+    combination = this * other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(12, abs=1)
 
@@ -103,8 +120,11 @@ def test_distribution_multiplication(this, other):
         (normal(12, 1), Value(6)),
     ],
 )
-def test_distribution_true_division(this, other):
-    samples = ~(this / other)
+def test_distribution_true_division(this: Union[float, Value], other: Union[float, Value]):
+    combination = this / other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(2, abs=1)
 
@@ -119,8 +139,11 @@ def test_distribution_true_division(this, other):
         (normal(12, 1), Value(5)),
     ],
 )
-def test_distribution_floor_division(this, other):
-    samples = ~(this // other)
+def test_distribution_floor_division(this: Union[float, Value], other: Union[float, Value]):
+    combination = this // other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     for sample in samples:
         assert sample == int(sample)
@@ -137,8 +160,11 @@ def test_distribution_floor_division(this, other):
         (normal(12, 1), Value(5)),
     ],
 )
-def test_distribution_modulo(this, other):
-    samples = ~(this % other)
+def test_distribution_modulo(this: Union[float, Value], other: Union[float, Value]):
+    combination = this % other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(2, abs=1)
 
@@ -153,8 +179,11 @@ def test_distribution_modulo(this, other):
         (normal(3, 0.1), Value(2)),
     ],
 )
-def test_distribution_power(this, other):
-    samples = ~(this ** other)
+def test_distribution_power(this: Union[float, Value], other: Union[float, Value]):
+    combination = this ** other
+    assert isinstance(combination, Value)
+    samples = ~combination
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(9, abs=1)
 
@@ -165,8 +194,9 @@ def test_distribution_power(this, other):
         mixture(normal(-5, 1), normal(5, 1)),
     ],
 )
-def test_distribution_abs(this):
+def test_distribution_abs(this: Value):
     samples = ~abs(this)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(5, abs=1)
 
@@ -177,8 +207,9 @@ def test_distribution_abs(this):
         normal(5, 1),
     ],
 )
-def test_distribution_negative(this):
+def test_distribution_negative(this: Value):
     samples = ~-this
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(-5, abs=1)
 
@@ -189,8 +220,9 @@ def test_distribution_negative(this):
         normal(-5, 1),
     ],
 )
-def test_distribution_positive(this):
+def test_distribution_positive(this: Value):
     samples = ~+this
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(-5, abs=1)
 
@@ -218,7 +250,11 @@ def test_distribution_positive(this):
         (operator.lt, (normal(1, 1), 10), all),
     ],
 )
-def test_distribution_comparison(function, inputs, test):
+def test_distribution_comparison(
+    function: Callable[..., Value],
+    inputs: Union[Tuple[Value, Value], Tuple[float, Value], Tuple[Value, float]],
+    test: Callable[[Iterable[bool]], bool],
+):
     # Superficial test because these may change
     assert test(~function(*inputs))
 
@@ -232,13 +268,14 @@ def test_distribution_comparison(function, inputs, test):
         (100, approx(10000, abs=1000), approx(20000, abs=1000), approx(0, abs=1000)),
     ],
 )
-def test_model(x, mean, mean_high, mean_low):
-    def model(x):
+def test_model(x: float, mean: ApproxScalar, mean_high: ApproxScalar, mean_low: ApproxScalar):
+    def model(x: float) -> Value:
         weight = mixture(normal(2, 0.1), normal(0, 0.1))
         bias = uniform(100, 200)
         return weight * x ** 2 + bias / 5
 
     samples = ~model(x)
+    assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == mean
     assert samples[samples > samples.mean()].mean() == mean_high

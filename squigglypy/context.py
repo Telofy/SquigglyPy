@@ -29,10 +29,10 @@ class SwungdashContext:
 class Context:
     context = contextvars.ContextVar("swungdash_context")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         self.kwargs = kwargs
-        self.saved_context: SwungdashContext = None
-        self.new_context: SwungdashContext = None
+        self.saved_context: Optional[SwungdashContext] = None
+        self.new_context: Optional[SwungdashContext] = None
 
     @classmethod
     def getcontext(cls):
@@ -44,7 +44,7 @@ class Context:
             return context
 
     @classmethod
-    def setcontext(cls, context):
+    def setcontext(cls, context: SwungdashContext):
         cls.context.set(context)
 
     def __enter__(self):
@@ -57,4 +57,5 @@ class Context:
         return self.new_context
 
     def __exit__(self, *_):
-        self.setcontext(self.saved_context)
+        if self.saved_context:
+            self.setcontext(self.saved_context)

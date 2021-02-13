@@ -26,7 +26,7 @@ class Resolveable:
     def __invert__(self):
         return self._resolve()
 
-    def _resolve(self) -> Union[float, Iterable[float], Empty]:
+    def _resolve(self) -> Union[Any, Iterable[Any], Empty]:
         raise NotImplementedError
 
     @property
@@ -244,7 +244,7 @@ def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
     return []
 
 
-def bfs(model: Callable[[Union[float, Value]], Union[float, Value]]) -> List[Value]:
+def bfs(model: Union[Callable[..., float], Callable[..., Value]]) -> List[Value]:
     tree = model(_tracer)
     tree = mark_constancy(tree)  # For visualization
     return _bfs(tree)

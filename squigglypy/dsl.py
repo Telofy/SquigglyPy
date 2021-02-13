@@ -1,28 +1,33 @@
+from typing import Callable, Union
 import numpy as np
 
-from .tree import Distribution, Mixture
 from .resolvers import Integral
+from .tree import Distribution, Mixture, Value
 
 
-def uniform(*args):
+def uniform(*args: float):
     return Distribution(np.random.uniform, *args)
 
 
-def normal(*args):
+def normal(*args: float):
     return Distribution(np.random.normal, *args)
 
 
-def lognormal(*args):
+def lognormal(*args: float):
     return Distribution(np.random.lognormal, *args)
 
 
-def pareto(*args):
+def pareto(*args: float):
     return Distribution(np.random.pareto, *args)
 
 
-def mixture(*values):
+def mixture(*values: Value):
     return Mixture(*values)
 
 
-def integral(*args, **kwargs):
-    return Integral(*args, **kwargs)
+def integral(
+    integrand: Callable[[Union[float, Value]], Union[float, Value]],
+    low: float,
+    high: float,
+):
+    return Integral(integrand, low, high)

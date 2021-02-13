@@ -1,8 +1,4 @@
-import operator
-
-from pytest import approx, mark
-from squigglypy.context import DEFAULT_SAMPLE_COUNT
-from squigglypy.dsl import lognormal, mixture, normal, pareto, uniform
+from squigglypy.dsl import mixture, normal, uniform
 from squigglypy.tree import Value, bfs
 
 
