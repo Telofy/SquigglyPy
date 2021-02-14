@@ -115,7 +115,7 @@ class Operation(Resolveable):
         return CacheKey(function=self.function, nested=(this_key, other_key))
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.function}, {self.this}, {self.other})"
+        return f"{type(self).__name__}({self.function.__name__}, {self.this}, {self.other})"
 
     def _resolve(self):
         this, other = ~self.this, ~self.other
@@ -166,6 +166,9 @@ class Distribution(Value):
 class Mixture(Value):
     def __init__(self, *values: Value):  # pylint: disable=super-init-not-called
         self.values: List[Value] = list(values)
+
+    def __repr__(self):
+        return f"{type(self).__name__}{tuple(self.values)}"
 
     @property
     def cache_key(self):
