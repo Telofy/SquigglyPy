@@ -222,10 +222,10 @@ def _mark_constancy(tree: Union[float, Value]) -> bool:
             return tree.value.this.constant
         tree.value.other.constant = _mark_constancy(tree.value.other)
         return tree.value.this.constant and tree.value.other.constant
-    if not isinstance(tree.value, Value):
-        tree.value = Value(tree.value, constant=True)
-    tree.value.constant = _mark_constancy(tree.value)
-    return tree.value.constant
+    if isinstance(tree.value, Value):
+        tree.value.constant = _mark_constancy(tree.value)
+        return tree.value.constant
+    return True
 
 
 def mark_constancy(tree: Union[float, Value]):
@@ -239,9 +239,10 @@ def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
     if isinstance(tree, Distribution):
         return [tree]
     if isinstance(tree, Mixture):
-        return list(chain.from_iterable(_bfs(value_) for value_ in tree.values))
+        nested = [_bfs(value_) for value_ in tree.values]
+        return [tree] + list(chain.from_iterable(nested))  # type: ignore
     if isinstance(tree, Value):
-        return _bfs(tree.value)
+        return [tree] + _bfs(tree.value)
     if isinstance(tree, Operation):
         return _bfs(tree.this) + _bfs(tree.other)
     return []
