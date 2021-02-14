@@ -1,12 +1,10 @@
-from collections.abc import Callable
-from typing import Tuple, Union
+from typing import Callable, Tuple, Union
 
 from scipy.integrate import quad
 
 from .context import Context
 from .tree import Resolveable, Value
 from .utils import aslist
-
 
 quad: Callable[..., Tuple[float, float]]
 

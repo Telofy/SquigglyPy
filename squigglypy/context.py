@@ -1,9 +1,6 @@
 import contextvars
-
-from collections.abc import Iterable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Dict, Hashable, Optional, Tuple
-
+from typing import Any, Callable, Dict, Hashable, Iterable, Optional, Tuple
 
 DEFAULT_SAMPLE_COUNT = 1000
 
