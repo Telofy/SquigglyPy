@@ -13,8 +13,17 @@ def test_bfs():
     variables = [str(part) for part in parts if not part.constant]
     assert all(part.constant is not None for part in parts)
     assert constants == [
+        "Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1))",
         "Distribution(normal, 2, 0.1)",
         "Distribution(normal, 0, 0.1)",
+        "Value(2)",
+        "Value(Operation(truediv, Distribution(uniform, 100, 200), Value(5)))",
         "Distribution(uniform, 100, 200)",
+        "Value(5)",
     ]
-    assert variables == []
+    assert variables == [
+        "Value(Operation(add, Value(Operation(mul, Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1)), Value(Operation(pow, Value(0), Value(2))))), Value(Operation(truediv, Distribution(uniform, 100, 200), Value(5)))))",
+        "Value(Operation(mul, Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1)), Value(Operation(pow, Value(0), Value(2)))))",
+        "Value(Operation(pow, Value(0), Value(2)))",
+        "Value(0)",
+    ]
