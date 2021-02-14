@@ -6,10 +6,10 @@
   ],
   "settings": {
     "files.autoSave": "onFocusChange",
-    "python.pythonPath": "~/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.9/bin/python",
-    "python.linting.mypyPath": "~/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.9/bin/mypy",
+    "python.pythonPath": "/home/telofy/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.8/bin/python",
+    "python.linting.mypyPath": "~/.cache/pypoetry/virtualenvs/squigglypy-qRJYpmoR-py3.8/bin/mypy",
     "python.linting.mypyEnabled": false,
-    "python.linting.enabled": false,
+    "python.linting.enabled": true,
     "pythonTestExplorer.testFramework": "pytest",
   }
 }

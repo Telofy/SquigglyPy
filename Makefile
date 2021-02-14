@@ -1,5 +1,5 @@
 SHELL = /bin/bash
-PYTHON ?= python3.9
+PYTHON ?= python3.8
 PYTEST ?= pytest
 VENV ?= $(shell poetry env info -p)/lib/${PYTHON}/site-packages
 LC_ALL = en_DK.UTF-8
