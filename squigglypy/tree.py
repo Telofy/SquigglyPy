@@ -52,7 +52,7 @@ class Value(Resolveable):
     def __repr__(self):
         if self.name:
             return self.name
-        return f"{type(self).__name__}({self.value})"
+        return str(self.value)
 
     @property
     def cache_key(self):
@@ -108,6 +108,25 @@ class Value(Resolveable):
 
 
 class Operation(Resolveable):
+    FORMATS = {
+        operator.neg: "-{this}",
+        operator.pos: "{this}",
+        operator.abs: "abs({this})",
+        operator.add: "({this} + {other})",
+        operator.floordiv: "({this} // {other})",
+        operator.mod: "({this} % {other})",
+        operator.mul: "({this} * {other})",
+        operator.pow: "({this} ** {other})",
+        operator.sub: "({this} - {other})",
+        operator.truediv: "({this} / {other})",
+        operator.lt: "({this} < {other})",
+        operator.le: "({this} <= {other})",
+        operator.eq: "({this} == {other})",
+        operator.ne: "({this} != {other})",
+        operator.ge: "({this} >= {other})",
+        operator.gt: "({this} > {other})",
+    }
+
     def __init__(
         self,
         function: Callable[..., Any],
@@ -125,6 +144,10 @@ class Operation(Resolveable):
         return CacheKey(function=self.function, nested=(this_key, other_key))
 
     def __repr__(self):
+        if self.function in self.FORMATS:
+            if self.other is _empty:
+                return self.FORMATS[self.function].format(this=self.this)
+            return self.FORMATS[self.function].format(this=self.this, other=self.other)
         return f"{type(self).__name__}({self.function.__name__}, {self.this}, {self.other})"
 
     def _resolve(self):
@@ -152,11 +175,10 @@ class Distribution(Value):
     def __repr__(self):
         if self.name:
             return self.name
-        name = type(self).__name__
-        function = self.function.__name__
+        name = self.function.__name__
         args = ", ".join(map(str, self.args))
         kwargs = ", ".join(f"{key}={value}" for key, value in self.kwargs.items())
-        return f'{name}({", ".join(part for part in (function, args, kwargs) if part)})'
+        return f'{name}({", ".join(part for part in (args, kwargs) if part)})'
 
     @property
     def cache_key(self):
@@ -187,7 +209,7 @@ class Mixture(Value):
     def __repr__(self):
         if self.name:
             return self.name
-        return f"{type(self).__name__}{tuple(self.values)}"
+        return f"{type(self).__name__}({self.values})"
 
     @property
     def cache_key(self):

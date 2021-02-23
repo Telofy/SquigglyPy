@@ -14,17 +14,17 @@ def test_bfs():
     assert tracer is not _tracer
     assert all(part.constant is not None for part in parts)
     assert constants == [
-        "Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1))",
-        "Distribution(normal, 2, 0.1)",
-        "Distribution(normal, 0, 0.1)",
-        "Value(2)",
-        "Value(Operation(truediv, Distribution(uniform, 100, 200), Value(5)))",
-        "Distribution(uniform, 100, 200)",
-        "Value(5)",
+        "Mixture([normal(2, 0.1), normal(0, 0.1)])",
+        "normal(2, 0.1)",
+        "normal(0, 0.1)",
+        "2",
+        "(uniform(100, 200) / 5)",
+        "uniform(100, 200)",
+        "5",
     ]
     assert variables == [
-        "Value(Operation(add, Value(Operation(mul, Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1)), Value(Operation(pow, x, Value(2))))), Value(Operation(truediv, Distribution(uniform, 100, 200), Value(5)))))",
-        "Value(Operation(mul, Mixture(Distribution(normal, 2, 0.1), Distribution(normal, 0, 0.1)), Value(Operation(pow, x, Value(2)))))",
-        "Value(Operation(pow, x, Value(2)))",
+        "((Mixture([normal(2, 0.1), normal(0, 0.1)]) * (x ** 2)) + (uniform(100, 200) / 5))",
+        "(Mixture([normal(2, 0.1), normal(0, 0.1)]) * (x ** 2))",
+        "(x ** 2)",
         "x",
     ]

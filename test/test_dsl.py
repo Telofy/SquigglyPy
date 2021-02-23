@@ -44,7 +44,7 @@ def test_pareto():
 
 
 def test_mixture():
-    samples = ~mixture(normal(0, 1), normal(10, 1))
+    samples = ~mixture([normal(0, 1), normal(10, 1)])
     assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(5, abs=0.2)
@@ -191,7 +191,7 @@ def test_distribution_power(this: Union[float, Value], other: Union[float, Value
 @mark.parametrize(
     "this",
     [
-        mixture(normal(-5, 1), normal(5, 1)),
+        mixture([normal(-5, 1), normal(5, 1)]),
     ],
 )
 def test_distribution_abs(this: Value):
@@ -270,7 +270,7 @@ def test_distribution_comparison(
 )
 def test_model(x: float, mean: ApproxScalar, mean_high: ApproxScalar, mean_low: ApproxScalar):
     def model(x: float) -> Value:
-        weight = mixture(normal(2, 0.1), normal(0, 0.1))
+        weight = mixture([normal(2, 0.1), normal(0, 0.1)])
         bias = uniform(100, 200)
         return weight * x ** 2 + bias / 5
 
