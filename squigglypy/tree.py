@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import operator
+from copy import copy
 from itertools import chain
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partialmethod
 from random import sample
-from typing import Any, Hashable, Iterable, List, Optional, Union
+from typing import Any, Hashable, Iterable, List, Optional, Sequence, Tuple, Union
 from enum import Enum
 
 import numpy as np
@@ -36,12 +37,21 @@ class Resolveable:
 
 class Value(Resolveable):
     constant: Optional[bool] = None  # Whether the value depends on independent variables
+    name: Optional[str] = None
 
-    def __init__(self, value: Union[float, Resolveable, Empty], constant: Optional[bool] = None):
+    def __init__(
+        self,
+        value: Union[float, Resolveable, Empty],
+        constant: Optional[bool] = None,
+        name: Optional[str] = None,
+    ):
         self.value = value
         self.constant = constant
+        self.name = name
 
     def __repr__(self):
+        if self.name:
+            return self.name
         return f"{type(self).__name__}({self.value})"
 
     @property
@@ -131,13 +141,17 @@ class Distribution(Value):
         self,
         function: Callable[..., Iterable[float]],
         *args: float,
+        name: Optional[str] = None,
         **kwargs: Empty,
     ):  # pylint: disable=super-init-not-called
         self.function = function
+        self.name = name
         self.args = args
         self.kwargs = kwargs
 
     def __repr__(self):
+        if self.name:
+            return self.name
         name = type(self).__name__
         function = self.function.__name__
         args = ", ".join(map(str, self.args))
@@ -164,10 +178,15 @@ class Distribution(Value):
 
 
 class Mixture(Value):
-    def __init__(self, *values: Value):  # pylint: disable=super-init-not-called
-        self.values: List[Value] = list(values)
+    def __init__(
+        self, values: Sequence[Value], name: Optional[str] = None
+    ):  # pylint: disable=super-init-not-called
+        self.values = values
+        self.name = name
 
     def __repr__(self):
+        if self.name:
+            return self.name
         return f"{type(self).__name__}{tuple(self.values)}"
 
     @property
@@ -202,7 +221,7 @@ class Mixture(Value):
             return value
 
 
-_tracer: Value = Value(0)
+_tracer: Value = Value(0, name="x")
 
 
 def _mark_constancy(tree: Union[float, Value]) -> bool:
@@ -248,7 +267,16 @@ def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
     return []
 
 
-def bfs(model: Union[Callable[..., float], Callable[..., Value]]) -> List[Value]:
+def bfs(model: Union[Callable[..., float], Callable[..., Value]]) -> Tuple[List[Value], Value]:
+    tracer = copy(_tracer)
     tree = model(_tracer)
     tree = mark_constancy(tree)  # For visualization
-    return _bfs(tree)
+    return _bfs(tree), tracer
+
+
+def as_model(part: Value, tracer: Value):
+    def model(x: float):
+        tracer.value = x
+        return part
+
+    return model
