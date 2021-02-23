@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Sequence, Union
 import numpy as np
 
 from .resolvers import Integral
@@ -21,8 +21,8 @@ def pareto(*args: float):
     return Distribution(np.random.pareto, *args)
 
 
-def mixture(*values: Value):
-    return Mixture(*values)
+def mixture(values: Sequence[Value]):
+    return Mixture(values)
 
 
 def integral(
