@@ -18,13 +18,13 @@ def test_bfs():
         "normal(2, 0.1)",
         "normal(0, 0.1)",
         "2",
-        "(uniform(100, 200) / 5)",
+        "uniform(100, 200) / 5",
         "uniform(100, 200)",
         "5",
     ]
     assert variables == [
-        "((Mixture([normal(2, 0.1), normal(0, 0.1)]) * (x ** 2)) + (uniform(100, 200) / 5))",
-        "(Mixture([normal(2, 0.1), normal(0, 0.1)]) * (x ** 2))",
-        "(x ** 2)",
+        "Mixture([normal(2, 0.1), normal(0, 0.1)]) * x ** 2 + uniform(100, 200) / 5",
+        "Mixture([normal(2, 0.1), normal(0, 0.1)]) * x ** 2",
+        "x ** 2",
         "x",
     ]

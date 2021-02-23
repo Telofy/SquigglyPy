@@ -35,35 +35,9 @@ class Resolveable:
         raise NotImplementedError
 
 
-class Value(Resolveable):
+class BaseValue(Resolveable):
     constant: Optional[bool] = None  # Whether the value depends on independent variables
     name: Optional[str] = None
-
-    def __init__(
-        self,
-        value: Union[float, Resolveable, Empty],
-        constant: Optional[bool] = None,
-        name: Optional[str] = None,
-    ):
-        self.value = value
-        self.constant = constant
-        self.name = name
-
-    def __repr__(self):
-        if self.name:
-            return self.name
-        return str(self.value)
-
-    @property
-    def cache_key(self):
-        if isinstance(self.value, Resolveable):
-            return self.value.cache_key
-        return self.value
-
-    def _resolve(self):
-        if isinstance(self.value, Resolveable):
-            return ~self.value
-        return self.value
 
     def _operation(
         self,
@@ -107,35 +81,88 @@ class Value(Resolveable):
     __gt__ = partialmethod(_operation, operator.gt)
 
 
+class Value(BaseValue):
+    def __init__(
+        self,
+        value: Union[float, Resolveable, Empty],
+        constant: Optional[bool] = None,
+        name: Optional[str] = None,
+    ):
+        self.value = value
+        self.constant = constant
+        self.name = name
+
+    def __repr__(self):
+        if self.name:
+            return self.name
+        return str(self.value)
+
+    @property
+    def cache_key(self):
+        if isinstance(self.value, Resolveable):
+            return self.value.cache_key
+        return self.value
+
+    def _resolve(self):
+        if isinstance(self.value, Resolveable):
+            return ~self.value
+        return self.value
+
+
 class Operation(Resolveable):
     FORMATS = {
         operator.neg: "-{this}",
         operator.pos: "{this}",
         operator.abs: "abs({this})",
-        operator.add: "({this} + {other})",
-        operator.floordiv: "({this} // {other})",
-        operator.mod: "({this} % {other})",
-        operator.mul: "({this} * {other})",
-        operator.pow: "({this} ** {other})",
-        operator.sub: "({this} - {other})",
-        operator.truediv: "({this} / {other})",
-        operator.lt: "({this} < {other})",
-        operator.le: "({this} <= {other})",
-        operator.eq: "({this} == {other})",
-        operator.ne: "({this} != {other})",
-        operator.ge: "({this} >= {other})",
-        operator.gt: "({this} > {other})",
+        operator.add: "{this} + {other}",
+        operator.floordiv: "{this} // {other}",
+        operator.mod: "{this} % {other}",
+        operator.mul: "{this} * {other}",
+        operator.pow: "{this} ** {other}",
+        operator.sub: "{this} - {other}",
+        operator.truediv: "{this} / {other}",
+        operator.lt: "{this} < {other}",
+        operator.le: "{this} <= {other}",
+        operator.eq: "{this} == {other}",
+        operator.ne: "{this} != {other}",
+        operator.ge: "{this} >= {other}",
+        operator.gt: "{this} > {other}",
     }
+    PRECEDENCE = {
+        operator.lt: 6,
+        operator.le: 6,
+        operator.eq: 6,
+        operator.ne: 6,
+        operator.ge: 6,
+        operator.gt: 6,
+        operator.add: 11,
+        operator.sub: 11,
+        operator.floordiv: 12,
+        operator.mod: 12,
+        operator.mul: 12,
+        operator.truediv: 12,
+        operator.neg: 13,
+        operator.pos: 13,
+        operator.pow: 14,
+        operator.abs: 16,
+    }
+
+    format: Optional[Callable[..., str]] = None
+    precedence: int = -1
 
     def __init__(
         self,
         function: Callable[..., Any],
-        this: Value,
-        other: Value = Value(_empty),
+        this: BaseValue,
+        other: BaseValue = Value(_empty),
     ):
         self.function = function
         self.this = this
         self.other = other
+        if function in self.FORMATS:
+            self.format = self.FORMATS[function].format
+        if function in self.PRECEDENCE:
+            self.precedence = self.PRECEDENCE[function]
 
     @property
     def cache_key(self):
@@ -144,10 +171,23 @@ class Operation(Resolveable):
         return CacheKey(function=self.function, nested=(this_key, other_key))
 
     def __repr__(self):
-        if self.function in self.FORMATS:
+        if self.format:
             if self.other is _empty:
-                return self.FORMATS[self.function].format(this=self.this)
-            return self.FORMATS[self.function].format(this=self.this, other=self.other)
+                return self.format(this=self.this)
+            this, other = str(self.this), str(self.other)
+            if (
+                isinstance(self.this, Value)
+                and isinstance(self.this.value, Operation)
+                and self.this.value.precedence < self.precedence
+            ):
+                this = f"({this})"
+            if (
+                isinstance(self.other, Value)
+                and isinstance(self.other.value, Operation)
+                and self.other.value.precedence < self.precedence
+            ):
+                other = f"({other})"
+            return self.format(this=this, other=other)
         return f"{type(self).__name__}({self.function.__name__}, {self.this}, {self.other})"
 
     def _resolve(self):
@@ -157,7 +197,7 @@ class Operation(Resolveable):
         return self.function(this, other)
 
 
-class Distribution(Value):
+class Distribution(BaseValue):
     constant = True
 
     def __init__(
@@ -199,9 +239,9 @@ class Distribution(Value):
             return value
 
 
-class Mixture(Value):
+class Mixture(BaseValue):
     def __init__(
-        self, values: Sequence[Value], name: Optional[str] = None
+        self, values: Sequence[BaseValue], name: Optional[str] = None
     ):  # pylint: disable=super-init-not-called
         self.values = values
         self.name = name
@@ -220,7 +260,7 @@ class Mixture(Value):
             )
 
     @staticmethod
-    def _sample(*values: Value):
+    def _sample(*values: BaseValue):
         with Context() as context:
             remainder = context.sample_count % len(values)
             sample_counts = [context.sample_count // len(values)] * len(values)
@@ -246,10 +286,10 @@ class Mixture(Value):
 _tracer: Value = Value(0, name="x")
 
 
-def _mark_constancy(tree: Union[float, Value]) -> bool:
+def _mark_constancy(tree: Union[float, BaseValue]) -> bool:
     if tree is _tracer:
         return False
-    if not isinstance(tree, Value):
+    if not isinstance(tree, BaseValue):
         return True
     if tree.constant is not None:
         return tree.constant
@@ -257,6 +297,7 @@ def _mark_constancy(tree: Union[float, Value]) -> bool:
         for value in tree.values:
             value.constant = _mark_constancy(value)
         return all(value.constant for value in tree.values)
+    assert isinstance(tree, Value)
     if isinstance(tree.value, Operation):
         tree.value.this.constant = _mark_constancy(tree.value.this)
         if tree.value.other is _empty:
@@ -269,34 +310,38 @@ def _mark_constancy(tree: Union[float, Value]) -> bool:
     return True
 
 
-def mark_constancy(tree: Union[float, Value]):
+def mark_constancy(tree: Union[float, BaseValue]):
     if not isinstance(tree, Value):
         return tree
     tree.constant = _mark_constancy(tree)
     return tree
 
 
-def _bfs(tree: Union[float, Resolveable, Empty]) -> List[Value]:
+def _bfs(tree: Union[float, Resolveable, Empty]) -> List[BaseValue]:
+    def seq(iterable: Iterable[Any]) -> List[BaseValue]:
+        """Return list with consistent type"""
+        return list(iterable)
+
     if isinstance(tree, Distribution):
         return [tree]
     if isinstance(tree, Mixture):
         nested = [_bfs(value_) for value_ in tree.values]
-        return [tree] + list(chain.from_iterable(nested))  # type: ignore
+        return seq([tree]) + seq(chain.from_iterable(nested))
     if isinstance(tree, Value):
-        return [tree] + _bfs(tree.value)
+        return seq([tree]) + _bfs(tree.value)
     if isinstance(tree, Operation):
         return _bfs(tree.this) + _bfs(tree.other)
     return []
 
 
-def bfs(model: Union[Callable[..., float], Callable[..., Value]]) -> Tuple[List[Value], Value]:
+def bfs(model: Union[Callable[..., float], Callable[..., Value]]) -> Tuple[List[BaseValue], Value]:
     tracer = copy(_tracer)
     tree = model(_tracer)
     tree = mark_constancy(tree)  # For visualization
     return _bfs(tree), tracer
 
 
-def as_model(part: Value, tracer: Value):
+def as_model(part: BaseValue, tracer: Value):
     def model(x: float):
         tracer.value = x
         return part

@@ -2,7 +2,7 @@ from typing import Callable, Sequence, Union
 import numpy as np
 
 from .resolvers import Integral
-from .tree import Distribution, Mixture, Value
+from .tree import BaseValue, Distribution, Mixture
 
 
 def uniform(*args: float):
@@ -21,12 +21,12 @@ def pareto(*args: float):
     return Distribution(np.random.pareto, *args)
 
 
-def mixture(values: Sequence[Value]):
+def mixture(values: Sequence[BaseValue]):
     return Mixture(values)
 
 
 def integral(
-    integrand: Callable[[Union[float, Value]], Union[float, Value]],
+    integrand: Callable[[Union[float, BaseValue]], Union[float, BaseValue]],
     low: float,
     high: float,
 ):

@@ -1,9 +1,9 @@
 from typing import Callable, Tuple, Union
 
-from scipy.integrate import quad
+from scipy.integrate import quad  # type: ignore
 
 from .context import Context
-from .tree import Resolveable, Value
+from .tree import BaseValue, Resolveable
 from .utils import aslist
 
 quad: Callable[..., Tuple[float, float]]
@@ -12,7 +12,7 @@ quad: Callable[..., Tuple[float, float]]
 class Integral(Resolveable):
     def __init__(
         self,
-        integrand: Callable[[Union[float, Value]], Union[float, Value]],
+        integrand: Callable[[Union[float, BaseValue]], Union[float, BaseValue]],
         low: float,
         high: float,
     ):
@@ -22,7 +22,7 @@ class Integral(Resolveable):
 
     def _integrand_wrapper(self, x: float):
         result = self.integrand(x)
-        if isinstance(result, Value):
+        if isinstance(result, BaseValue):
             return ~result
         return result
 

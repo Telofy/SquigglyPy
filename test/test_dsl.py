@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Callable, Iterable, Tuple, Union
+from typing import Callable, Iterable, Tuple, Union
 from _pytest.python_api import ApproxScalar
 
 import numpy as np
