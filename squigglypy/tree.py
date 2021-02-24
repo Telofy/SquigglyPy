@@ -184,7 +184,7 @@ class Operation(Resolveable):
             if (
                 isinstance(self.other, Value)
                 and isinstance(self.other.value, Operation)
-                and self.other.value.precedence < self.precedence
+                and self.other.value.precedence <= self.precedence
             ):
                 other = f"({other})"
             return self.format(this=this, other=other)
