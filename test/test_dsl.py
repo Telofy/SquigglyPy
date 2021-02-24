@@ -48,7 +48,7 @@ def test_mixture():
     assert isinstance(samples, np.ndarray)
     assert samples.shape == (DEFAULT_SAMPLE_COUNT,)
     assert samples.mean() == approx(5, abs=0.2)
-    assert not samples[(samples > 4.5) & (samples < 5.5)]
+    assert samples[(samples > 4.5) & (samples < 5.5)].size == 0
 
 
 @mark.parametrize(
